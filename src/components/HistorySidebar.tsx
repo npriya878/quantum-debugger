@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Trash2, Search } from 'lucide-react';
-import { supabase } from '../services/supabase';
+import { storage } from '../services/storage';
 import { DebugSession } from '../types';
 
 interface HistorySidebarProps {
@@ -11,7 +11,6 @@ export function HistorySidebar({ onSelectSession }: HistorySidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [history, setHistory] = useState<DebugSession[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -19,32 +18,14 @@ export function HistorySidebar({ onSelectSession }: HistorySidebarProps) {
     }
   }, [isOpen]);
 
-  const loadHistory = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('debug_history')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      setHistory(data || []);
-    } catch (err) {
-      console.error('Failed to load history:', err);
-    } finally {
-      setLoading(false);
-    }
+  const loadHistory = () => {
+    const sessions = storage.getSessions();
+    setHistory(sessions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
   };
 
-  const deleteSession = async (id: string) => {
-    try {
-      const { error } = await supabase.from('debug_history').delete().eq('id', id);
-      if (error) throw error;
-      setHistory(history.filter((h) => h.id !== id));
-    } catch (err) {
-      console.error('Failed to delete session:', err);
-    }
+  const deleteSession = (id: string) => {
+    storage.deleteSession(id);
+    setHistory(history.filter((h) => h.id !== id));
   };
 
   const filteredHistory = history.filter(
@@ -91,9 +72,7 @@ export function HistorySidebar({ onSelectSession }: HistorySidebarProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="p-4 text-center text-gray-400 text-sm">Loading…</div>
-            ) : filteredHistory.length === 0 ? (
+            {filteredHistory.length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">No history yet</div>
             ) : (
               <div className="space-y-2 p-3">

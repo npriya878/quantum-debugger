@@ -7,7 +7,7 @@ import { ScanlineOverlay } from './components/ScanlineOverlay';
 import { TerminalLoader } from './components/TerminalLoader';
 import { ThemeSelector } from './components/ThemeSelector';
 import { HistorySidebar } from './components/HistorySidebar';
-import { supabase } from './services/supabase';
+import { storage } from './services/storage';
 import { Universe, DebugSession } from './types';
 import { Zap } from 'lucide-react';
 
@@ -40,7 +40,7 @@ function App() {
 
       const avgChaos = solutions.reduce((sum, u) => sum + u.chaosRating, 0) / solutions.length;
 
-      await supabase.from('debug_history').insert({
+      storage.addSession({
         language,
         bug_description: bugDescription,
         code,
